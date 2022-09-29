@@ -1,0 +1,16 @@
+import runtime;
+import string;
+
+main() {
+	int_array : [int] = [1, 2, 3, 4];
+
+    println(int_array);
+
+    string_array : [string] = map(int_array, i2s);
+
+    println(string_array);
+
+    strGlue(string_array, ", @ ") |> println;
+
+	quit(0);
+}

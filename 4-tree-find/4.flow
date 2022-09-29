@@ -1,0 +1,30 @@
+import runtime;
+import maybe;
+import ds/tree;
+
+inds(array: [int], m: int) -> [Pair<int, int>];
+
+inds(array: [int], m: int) {
+    tree: Tree<int, [int]> = foldi(array, makeTree(), 
+        \i, this_tree, n_i -> treePushToArrayValue(this_tree, n_i, i));
+
+    foldi(array, [], 
+        \i, arr, n_i -> 
+            switch(lookupTree(tree, m - n_i)) {
+                None(): arr;
+                Some(found_indexes): 
+                    if (i <= fold(found_indexes, found_indexes[0], min)) 
+                        concat(arr, map(found_indexes, 
+                            \index -> Pair(i, index))) 
+                    else arr
+            });
+}
+
+main() {
+    m: int = 6;
+    array: [int] = [9, 1, 0, 5, 3, 6, 2, 4, 7, 8, 1, -3];
+
+	inds(array, m) |> println;
+
+    quit(0);
+}

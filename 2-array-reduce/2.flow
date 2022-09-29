@@ -1,0 +1,11 @@
+import runtime;
+
+main() {
+	int_array : [int] = [1, 2, 3, 4];
+
+    println(int_array);
+
+    println(fold(int_array, 0, \a, b -> a + b));
+
+	quit(0);
+}
