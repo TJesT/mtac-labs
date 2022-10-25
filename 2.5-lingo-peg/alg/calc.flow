@@ -1,0 +1,61 @@
+import alg/gram;
+import ds/tree;
+
+export {
+    var_tree : Tree<string, Exp> = makeTree();
+
+    calc_exp(exp : Exp) -> double;
+    calc_spolish(string_polish: string) -> double;
+}
+
+calc_spolish(string_polish: string) -> double {
+    ops: [string] = ["+", "-", "*", "/", "%", "^"];
+
+    res: ref [string] = fold(strSplit(string_polish, " "), ref [], 
+        \stack, token -> if(contains(ops, token)) {
+                l: string = ^stack[length(^stack)-2];
+                r: string = ^stack[length(^stack)-1];
+                stack := subrange(^stack, 0, length(^stack)-2);
+                ref concat(^stack, 
+                    [concatStrings(["(", l, " ", token, " " , r, ")"]) 
+                        |> s2exp 
+                        |> calc_exp |> d2s]);
+            } else {
+                ref concat(^stack, [token]);
+            });
+
+    ^res[0] |> s2d;
+}
+
+calc_exp(exp : Exp) -> double {
+    switch (exp) {
+        Add(arg1, arg2): calc_exp(arg1) + calc_exp(arg2);
+        Mul(arg1, arg2): calc_exp(arg1) * calc_exp(arg2);
+        Sub(arg1, arg2): calc_exp(arg1) - calc_exp(arg2);
+        Div(arg1, arg2): calc_exp(arg1) / {val : double = calc_exp(arg2);
+            if (val == 0.0) {
+                println("Exception: division by zero");
+                s2d("nan");
+            } else {
+                val;
+            }
+        };
+        Mod(arg1, arg2): calc_exp(arg1) % calc_exp(arg2);
+        Pow(arg1, arg2): {
+            left  : double = calc_exp(arg1);
+            right : double = calc_exp(arg2);
+            
+            if (left == 0.0 && right < 0.0) {
+                println("Exception: zero with negative degree");
+                s2d("nan");
+            } else if (left < 0.0 && right > -1.0 && right < 1.0) {
+                println("Exception: negative num with |degree| < 1 ");
+                s2d("nan");
+            } else {
+                dpow(left, right);
+            }
+        };
+        Int(i): i2d(i);
+        Double(d): d;
+    }
+}

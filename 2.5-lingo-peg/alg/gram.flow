@@ -1,0 +1,76 @@
+import lingo/pegcode/driver;
+
+export {
+    Exp ::= Int, Double, Add, Mul, Sub, Div, Mod, Pow;
+    
+    Add : (arg1 : Exp, arg2 : Exp);
+    Sub : (arg1 : Exp, arg2 : Exp);
+    Mul : (arg1 : Exp, arg2 : Exp);
+    Div : (arg1 : Exp, arg2 : Exp);
+    Mod : (arg1 : Exp, arg2 : Exp);
+    Pow : (arg1 : Exp, arg2 : Exp);
+
+    Int    : (i : int);
+    Double : (d : double);
+
+    s2exp(str_exp : string) -> Exp;
+    exp2s(exp : Exp) -> string;
+    exp2spolish(exp : Exp) -> string;
+}
+
+grammar_singleton : ref Maybe<[PegOp]> = ref None();
+
+grammar() {
+    onlyOnce(grammar_singleton, \ -> {
+		compilePegGrammar("#include alg/lang.lingo");
+	});
+}
+
+s2exp(str_exp : string) -> Exp {
+    parsic(grammar(), str_exp, defaultPegActions);
+}
+
+exp2s(exp : Exp) -> string {
+    switch (exp) {
+        Add(arg1, arg2): 
+            concatStrings(["(", exp2s(arg1), " + ", exp2s(arg2), ")"]);
+        Mul(arg1, arg2): 
+            concatStrings(["(", exp2s(arg1), " * ", exp2s(arg2), ")"]);
+        Sub(arg1, arg2):
+            concatStrings(["(", exp2s(arg1), " - ", exp2s(arg2), ")"]);
+        Div(arg1, arg2):
+            concatStrings(["(", exp2s(arg1), " / ", exp2s(arg2), ")"]);
+        Mod(arg1, arg2):
+            concatStrings(["(", exp2s(arg1), " % ", exp2s(arg2), ")"]);
+        Pow(arg1, arg2):
+            concatStrings(["(", exp2s(arg1), " ^ ", exp2s(arg2), ")"]);
+        Int(i): i2s(i);
+        Double(d): d2s(d);
+    }
+}
+
+//TODO
+// spolish2exp(str_polish_exp : string) -> Exp {
+//     
+// }
+
+exp2spolish(exp : Exp) -> string {
+    switch (exp) {
+        Add(left, right):
+            concatStrings([exp2spolish(left), " ", exp2spolish(right), " +"]);
+        Mul(left, right): 
+            concatStrings([exp2spolish(left), " ", exp2spolish(right), " *"]);
+        Sub(left, right): 
+            concatStrings([exp2spolish(left), " ", exp2spolish(right), " -"]);
+        Div(left, right): 
+            concatStrings([exp2spolish(left), " ", exp2spolish(right), " /"]);
+        Mod(left, right): 
+            concatStrings([exp2spolish(left), " ", exp2spolish(right), " %"]);
+        Pow(left, right): 
+            concatStrings([exp2spolish(left), " ", exp2spolish(right), " ^"]);
+        Int(i):
+            i2s(i);
+        Double(d):
+            d2s(d);
+    }
+}

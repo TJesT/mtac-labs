@@ -1,0 +1,27 @@
+exp = ops | scalars;
+
+ops = add | sub | mul | div | pow | mod;
+
+add = ws "(" ws exp:arg1 ws "+" ws exp:arg2 ws ")" ws {Add(:arg1, :arg2)};
+sub = ws "(" ws exp:arg1 ws "-" ws exp:arg2 ws ")" ws {Sub(:arg1, :arg2)};
+
+mul = ws "(" ws exp:arg1 ws "*" ws exp:arg2 ws ")" ws {Mul(:arg1, :arg2)};
+div = ws "(" ws exp:arg1 ws "/" ws exp:arg2 ws ")" ws {Div(:arg1, :arg2)};
+
+pow = ws "(" ws exp:arg1 ws "^" ws exp:arg2 ws ")" ws {Pow(:arg1, :arg2)};
+mod = ws "(" ws exp:arg1 ws "%" ws exp:arg2 ws ")" ws {Mod(:arg1, :arg2)};
+
+
+scalars = negvar | var | double | int;
+
+negvar = ws ('-' varname)$v ws {Mul(Double(s2d("-1.0")), Var($v))};
+var     = ws (varname)$v ws {Var($v)};
+
+varname = letter (letter | digit)*;
+
+double = ws ('-'? digit+ '.' digit+)$d ws {Double(s2d($d))};
+int    = ws ('-'? digit+)$i ws {Int(s2i($i))};
+
+letter = 'a'-'z' | 'A'-'Z';
+digit  = '0'-'9';
+ws     = (' ' | '\t' | '\r')*;
