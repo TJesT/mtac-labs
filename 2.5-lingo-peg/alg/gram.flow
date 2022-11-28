@@ -15,12 +15,48 @@ export {
 
     Int    : (i : int);
     Double : (d : double);
-
     Var : (name : string);
+
+    exp_unpack(exp : Exp) -> [Exp];
+    exp_sign(exp : Exp) -> string;
 
     s2exp(str_exp : string) -> Exp;
     exp2s(exp : Exp) -> string;
     exp2spolish(exp : Exp) -> string;
+}
+
+exp_sign(exp : Exp) -> string {
+    switch (exp) {
+        Add(arg1, arg2): "+";
+        Sub(arg1, arg2): "-";
+        Mul(arg1, arg2): "*";
+        Mod(arg1, arg2): "%";
+        Div(arg1, arg2): "/";
+        Pow(arg1, arg2): "^";
+        Ln(arg): "ln";
+
+        Var(v): "var";
+        Int(i): "num";
+        Double(d): "num";
+        // DerivativeExp(arg, v): "d/dx";
+    }
+}
+
+exp_unpack(exp : Exp) -> [Exp] {
+    switch (exp) {
+        Add(arg1, arg2): [arg1, arg2];
+        Sub(arg1, arg2): [arg1, arg2];
+        Mul(arg1, arg2): [arg1, arg2];
+        Mod(arg1, arg2): [arg1, arg2];
+        Div(arg1, arg2): [arg1, arg2];
+        Pow(arg1, arg2): [arg1, arg2];
+        Ln(arg): [arg];
+        // Derivative(arg, v): [arg, Var(v)];
+
+        Var(v): [Var(v)];
+        Int(i): [Int(i)];
+        Double(d): [Double(d)];
+    }
 }
 
 grammar_singleton : ref Maybe<[PegOp]> = ref None();

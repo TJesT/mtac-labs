@@ -1,0 +1,251 @@
+import alg/gram;
+
+export {
+    exp_simplify(exp : Exp) -> Exp;
+}
+
+is_zero(exp : Exp) -> bool {
+    exp == Int(0) || exp == Double(0.0);
+}
+
+is_one(exp : Exp) -> bool {
+    exp == Int(1) || exp == Double(1.0);
+}
+
+is_neg_one(exp : Exp) -> bool {
+    exp == Int(-1) || exp == Double(-1.0);
+}
+
+exp_simplify(exp : Exp) -> Exp {
+    res_simplifier : Exp = do_simplify_step(exp);
+    if (res_simplifier == exp) {
+        exp;
+    }
+    else {
+        exp_simplify(res_simplifier);
+    }
+}
+
+do_simplify_step(exp : Exp) -> Exp {
+    switch(exp) {
+        Add(arg1, arg2): {
+            if (is_zero(arg1)) { // 0 + x == x
+                do_simplify_step(arg2);
+            }
+            else if (is_zero(arg2)) { // x + 0 == x
+                do_simplify_step(arg1);
+            }
+            else if (arg1 == arg2) { // x + x == 2 * x
+                Mul(Double(2.0), do_simplify_step(arg1));
+            }            
+            else {
+                arg1_args : [Exp] = exp_unpack(arg1);
+                arg2_args : [Exp] = exp_unpack(arg2);
+                arg1_type : string = exp_sign(arg1);
+                arg2_type : string = exp_sign(arg2);
+                if (arg1_type == "*") {
+                    if (is_neg_one(arg1_args[0])) { // ((-1) * x) + y == y - x
+                        Sub(do_simplify_step(arg2), do_simplify_step(arg1_args[1]));
+                    }
+                    else if (is_neg_one(arg1_args[1])) { // (x * (-1)) + y == y - x
+                        Sub(do_simplify_step(arg2), do_simplify_step(arg1_args[0]));
+                    }
+                    else {
+                        Add(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else if (arg2_type == "*") {
+                    if (is_neg_one(arg2_args[0])) { // y + ((-1) * x) == y - x
+                        Sub(do_simplify_step(arg1), do_simplify_step(arg2_args[1]));
+                    }
+                    else if (is_neg_one(arg2_args[1])) { // y + (x * (-1)) == y - x
+                        Sub(do_simplify_step(arg1), do_simplify_step(arg2_args[0]));
+                    }
+                    else {
+                        Add(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else if (arg1_type == "-" && arg1_args[1] == arg2) { // (x - y) + y == x
+                    do_simplify_step(arg1_args[0]);
+                }
+                else if (arg2_type == "-" && arg2_args[1] == arg1) { // y + (x - y) == x
+                    do_simplify_step(arg2_args[0]);
+                }
+                else {
+                    Add(do_simplify_step(arg1), do_simplify_step(arg2));
+                }
+            }
+        }
+        Sub(arg1, arg2): {
+            if (is_zero(arg2)) { // 0 - x == x * (-1)
+                Mul(do_simplify_step(arg2), Double(-1.0));
+            }
+            else if (is_zero(arg1)) { // x - 0 == x
+                do_simplify_step(arg1);
+            }
+            else if (arg1 == arg2) { // x - x == 0
+                Double(0.0);
+            }
+            else {
+                arg1_args : [Exp] = exp_unpack(arg1);
+                arg2_args : [Exp] = exp_unpack(arg2);
+                arg1_type : string = exp_sign(arg1);
+                arg2_type : string = exp_sign(arg2);
+                
+                if (arg1_type == "*") {
+                    if (is_neg_one(arg1_args[0])) { // ((-1) * x) - y == (y + x) * (-1)
+                        Mul(Add(do_simplify_step(arg2), do_simplify_step(arg1_args[1])), Double(-1.0));
+                    }
+                    else if (is_neg_one(arg1_args[1])) { // (x * (-1)) - y == (y + x) * (-1)
+                        Mul(Add(do_simplify_step(arg2), do_simplify_step(arg1_args[0])), Double(-1.0));
+                    }
+                    else {
+                        Add(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else if (arg2_type == "*") {
+                    if (is_neg_one(arg2_args[0])) { // y - ((-1) * x) == y + x
+                        Add(do_simplify_step(arg1), do_simplify_step(arg2_args[1]));
+                    }
+                    else if (is_neg_one(arg2_args[1])) { // y - (x * (-1)) == y + x
+                        Add(do_simplify_step(arg1), do_simplify_step(arg2_args[0]));
+                    }
+                    else {
+                        Add(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else if (arg1_type == "+") {
+                    if (arg1_args[1] == arg2) { // (x + y) - y == x
+                        do_simplify_step(arg1_args[0]);
+                    }
+                    else if (arg1_args[0] == arg2) { // (y + x) - y == x
+                        do_simplify_step(arg1_args[1]);
+                    }
+                    else {
+                        Sub(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else if (arg2_type == "+") { 
+                    if (arg2_args[1] == arg1) { // y - (x + y) == x * (-1)
+                        Mul(do_simplify_step(arg2_args[0]), Double(-1.0));
+                    }
+                    else if (arg2_args[0] == arg1) { // y - (y + x) == x * (-1)
+                        Mul(do_simplify_step(arg2_args[0]), Double(-1.0));
+                    }
+                    else {
+                        Sub(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else {
+                    Sub(do_simplify_step(arg1), do_simplify_step(arg2));
+                }
+            }
+        }
+        Mul(arg1, arg2): {
+            if (is_one(arg1)) { // 1 * x == x
+                do_simplify_step(arg2);
+            }
+            else if (is_one(arg2)) { // x * 1 == x
+                do_simplify_step(arg1);
+            }
+            else if (is_zero(arg1) || is_zero(arg2)) { // 0 * x == x * 0 == 0
+                Double(0.0);
+            }
+            else {
+                arg1_args : [Exp] = exp_unpack(arg1);
+                arg2_args : [Exp] = exp_unpack(arg2);
+                arg1_type : string = exp_sign(arg1);
+                arg2_type : string = exp_sign(arg2);
+                if (arg1_type == arg2_type && length(arg1_args) == 2) {
+                    if (arg1_type == "^" && arg1_args[0] == arg2_args[0]) { // x^y * x^z == x^(y + z) 
+                        Pow(do_simplify_step(arg1_args[0]), Add(do_simplify_step(arg1_args[1]), do_simplify_step(arg2_args[1])));
+                    }
+                    else {
+                        Mul(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else if (arg1_type == "/") {
+                    if (arg1_args[1] == arg2) { // (y / x) * x == y
+                        do_simplify_step(arg1_args[0])
+                    }
+                    else if (is_one(arg1_args[0])) { // (1 / y) * x = x / y
+                        Div(do_simplify_step(arg2), do_simplify_step(arg1_args[1]));
+                    }
+                    else {
+                        Mul(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else if (arg2_type == "/") {
+                    if (arg2_args[1] == arg1 && !is_zero(arg1)) { // x * (y / x) == y
+                        do_simplify_step(arg2_args[0])
+                    }
+                    else if (is_one(arg2_args[0])) { // x * (1 / y) == x / y
+                        Div(do_simplify_step(arg1), do_simplify_step(arg2_args[1]));
+                    }
+                    else {
+                        Mul(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else {
+                    Mul(do_simplify_step(arg1), do_simplify_step(arg2));
+                }
+            }
+        }
+        Div(arg1, arg2): {
+            if (is_one(arg2)) { // x / 1 == x
+                do_simplify_step(arg1);
+            }
+            else if (arg1 == arg2) { // x / x == 1, x != 0
+                Double(1.0);
+            }
+            else if (is_zero(arg1)) { // x == 0;
+                Double(0.0);
+            }
+            else {
+                arg1_args : [Exp] = exp_unpack(arg1);
+                arg2_args : [Exp] = exp_unpack(arg2);
+                arg1_type : string = exp_sign(arg1);
+                arg2_type : string = exp_sign(arg2);
+                if (arg1_type == "*") {
+                    if (arg1_args[1] == arg2) { // (y * x) / x == y
+                        do_simplify_step(arg1_args[0])
+                    }
+                    else if (arg1_args[0] == arg2) { // (x * y) / x == y
+                        do_simplify_step(arg1_args[1])
+                    }
+                    else {
+                        Div(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else if (arg2_type == "*") {
+                    if (arg2_args[1] == arg1) { // x / (y * x) == 1 / y
+                        Div(Double(1.0), do_simplify_step(arg2_args[0]));
+                    }
+                    else if (arg2_args[0] == arg1) { // x / (x * y) == 1 / y
+                        Div(Double(1.0), do_simplify_step(arg2_args[1]));
+                    }
+                    else {
+                        Mul(do_simplify_step(arg1), do_simplify_step(arg2));
+                    }
+                }
+                else {
+                    Div(do_simplify_step(arg1), do_simplify_step(arg2));
+                }
+            }
+        }
+        Mod(arg1, arg2): Mod(do_simplify_step(arg1), do_simplify_step(arg2));
+        Pow(arg1, arg2): {
+            if (is_one(arg2)) { // x ^ 1
+                do_simplify_step(arg1);
+            }
+            else {
+                Pow(do_simplify_step(arg1), do_simplify_step(arg2));
+            }
+        }
+        Var(v): Var(v);
+        Int(i): Int(i);
+        Double(d): Double(d);
+        Ln(arg): Ln(do_simplify_step(arg));
+        // DerivativeExp(arg, v): DerivativeExp(do_simplify_step(arg), v);
+    }
+}

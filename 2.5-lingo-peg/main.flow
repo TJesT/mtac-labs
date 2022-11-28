@@ -1,16 +1,24 @@
 import runtime;
 import alg/calc;
+import alg/simp;
 
 main() {
     vars := setTree(^vars, "a", 1.0);
-    vars := setTree(^vars, "e", 2.71828);
+    vars := setTree(^vars, "e", 2.71828182845904);
 
-    test : string = "((((1 - a) - 2) + (a * 2)) + ln(e))";
+    algr_test : string = "(((1 - 1) - 2) + (1 * 2))";
+    vars_test : string = "(a + ln(e))";
+    simp_test : string = "((ln(e) + 0) - ln(e))";
+
+    test = "(" + "(" + algr_test + "+" + vars_test + ")" + "+" + simp_test + ")";
 
     test |> s2exp |> println;
     test |> s2exp |> exp2s |> println;
-    exp = test |> s2exp;
-    calc_exp(exp, ^vars) |> println;
+    calc_exp(test |> s2exp, ^vars) |> println;
+
+    test |> s2exp |> exp_simplify |> println;
+    test |> s2exp |> exp_simplify |> exp2s |> println;
+    calc_exp(test |> s2exp |> exp_simplify, ^vars) |> println;
 
     // "3 4 2 * 1 5 - 2 3 ^ ^ / +" |> calc_spolish |> println;
 
