@@ -1,43 +1,20 @@
 import runtime;
 import alg/calc;
 
-// apply_all(str_exp: string) {
-//     str_exp |> s2exp |> println;
-
-//     str_exp |> s2exp |> exp2s |> println;
-//     str_exp |> s2exp |> exp2spolish |> println;
-    
-//     str_exp |> s2exp |> calc_exp |> println;
-
-//     println(" ");
-// }
-
-// func() {
-//     ref_array: ref [int] = ref [1, 2, 3, 4, 5];
-
-//     ref_array |> println;
-
-//     ref_array := subrange(^ref_array, 0, length(^ref_array)-2);
-
-//     ref_array |> println;
-// }
-
 main() {
-    // tests: [string] = [
-    //     "(((1 - 1) - 2) + (1 * 2))", 
-    //     "((1.5 / 2) - (2.0 ^ (((2 - 1) % 2) / 2.0)))", 
-    //     "(1 / 0)" ];
+    vars := setTree(^vars, "a", 1.0);
+    vars := setTree(^vars, "e", 2.71828);
 
-    // map(tests, apply_all);
-    
-    // func();
+    test : string = "((((1 - a) - 2) + (a * 2)) + ln(e))";
 
+    test |> s2exp |> println;
+    test |> s2exp |> exp2s |> println;
+    exp = test |> s2exp;
+    calc_exp(exp, ^vars) |> println;
 
-    test : string = "(((1 - 1) - 2) + (1 * 2))";
+    // "3 4 2 * 1 5 - 2 3 ^ ^ / +" |> calc_spolish |> println;
 
-    test |> s2exp |> exp2spolish |> calc_spolish |> println;
-
-    "3 4 2 * 1 5 - 2 3 ^ ^ / +" |> calc_spolish |> println;
+    // "(0.4 ^ (1/2))" |> s2exp |> exp2spolish |> calc_spolish |> println;
 
     quit(0);
 }

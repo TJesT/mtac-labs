@@ -1,17 +1,22 @@
 import lingo/pegcode/driver;
+import ds/tree;
+import math/math;
 
 export {
-    Exp ::= Int, Double, Add, Mul, Sub, Div, Mod, Pow;
+    Exp ::= Int, Double, Var, Add, Mul, Sub, Div, Mod, Pow, Ln;
     
-    Add : (arg1 : Exp, arg2 : Exp);
-    Sub : (arg1 : Exp, arg2 : Exp);
-    Mul : (arg1 : Exp, arg2 : Exp);
-    Div : (arg1 : Exp, arg2 : Exp);
-    Mod : (arg1 : Exp, arg2 : Exp);
-    Pow : (arg1 : Exp, arg2 : Exp);
+    Add : (left : Exp, right : Exp);
+    Sub : (left : Exp, right : Exp);
+    Mul : (left : Exp, right : Exp);
+    Div : (left : Exp, right : Exp);
+    Mod : (left : Exp, right : Exp);
+    Pow : (left : Exp, right : Exp);
+    Ln  : (value : Exp);
 
     Int    : (i : int);
     Double : (d : double);
+
+    Var : (name : string);
 
     s2exp(str_exp : string) -> Exp;
     exp2s(exp : Exp) -> string;
@@ -32,45 +37,42 @@ s2exp(str_exp : string) -> Exp {
 
 exp2s(exp : Exp) -> string {
     switch (exp) {
-        Add(arg1, arg2): 
-            concatStrings(["(", exp2s(arg1), " + ", exp2s(arg2), ")"]);
-        Mul(arg1, arg2): 
-            concatStrings(["(", exp2s(arg1), " * ", exp2s(arg2), ")"]);
-        Sub(arg1, arg2):
-            concatStrings(["(", exp2s(arg1), " - ", exp2s(arg2), ")"]);
-        Div(arg1, arg2):
-            concatStrings(["(", exp2s(arg1), " / ", exp2s(arg2), ")"]);
-        Mod(arg1, arg2):
-            concatStrings(["(", exp2s(arg1), " % ", exp2s(arg2), ")"]);
-        Pow(arg1, arg2):
-            concatStrings(["(", exp2s(arg1), " ^ ", exp2s(arg2), ")"]);
-        Int(i): i2s(i);
+        Add(left, right): 
+            "(" + exp2s(left) + " + " + exp2s(right) + ")";
+        Mul(left, right): 
+            "(" + exp2s(left) + " * " + exp2s(right) + ")";
+        Sub(left, right):
+            "(" + exp2s(left) + " - " + exp2s(right) + ")";
+        Div(left, right):
+            "(" + exp2s(left) + " / " + exp2s(right) + ")";
+        Mod(left, right):
+            "(" + exp2s(left) + " % " + exp2s(right) + ")";
+        Pow(left, right):
+            "(" + exp2s(left) + " ^ " + exp2s(right) + ")";
+        Ln(val): "ln(" + exp2s(val) + ")";
+        Int(i):    i2s(i);
         Double(d): d2s(d);
+        Var(name): name;
     }
 }
-
-//TODO
-// spolish2exp(str_polish_exp : string) -> Exp {
-//     
-// }
 
 exp2spolish(exp : Exp) -> string {
     switch (exp) {
         Add(left, right):
-            concatStrings([exp2spolish(left), " ", exp2spolish(right), " +"]);
+            exp2spolish(left) + " " + exp2spolish(right) + " +";
         Mul(left, right): 
-            concatStrings([exp2spolish(left), " ", exp2spolish(right), " *"]);
+            exp2spolish(left) + " " + exp2spolish(right) + " *";
         Sub(left, right): 
-            concatStrings([exp2spolish(left), " ", exp2spolish(right), " -"]);
+            exp2spolish(left) + " " + exp2spolish(right) + " -";
         Div(left, right): 
-            concatStrings([exp2spolish(left), " ", exp2spolish(right), " /"]);
+            exp2spolish(left) + " " + exp2spolish(right) + " /";
         Mod(left, right): 
-            concatStrings([exp2spolish(left), " ", exp2spolish(right), " %"]);
+            exp2spolish(left) + " " + exp2spolish(right) + " %";
         Pow(left, right): 
-            concatStrings([exp2spolish(left), " ", exp2spolish(right), " ^"]);
-        Int(i):
-            i2s(i);
-        Double(d):
-            d2s(d);
+            exp2spolish(left) + " " + exp2spolish(right) + " ^";
+        Ln(val): exp2spolish(val) + " Ln";
+        Int(i)   : i2s(i);
+        Double(d): d2s(d);
+        Var(name): name;
     }
 }

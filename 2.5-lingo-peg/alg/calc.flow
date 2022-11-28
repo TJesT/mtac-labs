@@ -1,14 +1,13 @@
 import alg/gram;
-import ds/tree;
 
 export {
-    var_tree : Tree<string, Exp> = makeTree();
+    vars : ref Tree<string, double> = ref makeTree();
 
-    calc_exp(exp : Exp) -> double;
-    calc_spolish(string_polish: string) -> double;
+    calc_exp(exp : Exp, vars : Tree<string, double>) -> double;
+    calc_spolish(string_polish: string, vars: Tree<string, double>) -> double ;
 }
 
-calc_spolish(string_polish: string) -> double {
+calc_spolish(string_polish: string, vars: Tree<string, double>) -> double {
     ops: [string] = ["+", "-", "*", "/", "%", "^"];
 
     res: ref [string] = fold(strSplit(string_polish, " "), ref [], 
@@ -17,9 +16,7 @@ calc_spolish(string_polish: string) -> double {
                 r: string = ^stack[length(^stack)-1];
                 stack := subrange(^stack, 0, length(^stack)-2);
                 ref concat(^stack, 
-                    [concatStrings(["(", l, " ", token, " " , r, ")"]) 
-                        |> s2exp 
-                        |> calc_exp |> d2s]);
+                    [calc_exp(concatStrings(["(", l, " ", token, " " , r, ")"]) |> s2exp, vars) |> d2s]);
             } else {
                 ref concat(^stack, [token]);
             });
@@ -27,12 +24,12 @@ calc_spolish(string_polish: string) -> double {
     ^res[0] |> s2d;
 }
 
-calc_exp(exp : Exp) -> double {
+calc_exp(exp : Exp, vars : Tree<string, double>) -> double {
     switch (exp) {
-        Add(arg1, arg2): calc_exp(arg1) + calc_exp(arg2);
-        Mul(arg1, arg2): calc_exp(arg1) * calc_exp(arg2);
-        Sub(arg1, arg2): calc_exp(arg1) - calc_exp(arg2);
-        Div(arg1, arg2): calc_exp(arg1) / {val : double = calc_exp(arg2);
+        Add(arg1, arg2): calc_exp(arg1, vars) + calc_exp(arg2, vars);
+        Mul(arg1, arg2): calc_exp(arg1, vars) * calc_exp(arg2, vars);
+        Sub(arg1, arg2): calc_exp(arg1, vars) - calc_exp(arg2, vars);
+        Div(arg1, arg2): calc_exp(arg1, vars) / {val : double = calc_exp(arg2, vars);
             if (val == 0.0) {
                 println("Exception: division by zero");
                 s2d("nan");
@@ -40,10 +37,10 @@ calc_exp(exp : Exp) -> double {
                 val;
             }
         };
-        Mod(arg1, arg2): calc_exp(arg1) % calc_exp(arg2);
+        Mod(arg1, arg2): calc_exp(arg1, vars) % calc_exp(arg2, vars);
         Pow(arg1, arg2): {
-            left  : double = calc_exp(arg1);
-            right : double = calc_exp(arg2);
+            left  : double = calc_exp(arg1, vars);
+            right : double = calc_exp(arg2, vars);
             
             if (left == 0.0 && right < 0.0) {
                 println("Exception: zero with negative degree");
@@ -55,7 +52,11 @@ calc_exp(exp : Exp) -> double {
                 dpow(left, right);
             }
         };
+        Ln(val): log(calc_exp(val, vars));
         Int(i): i2d(i);
         Double(d): d;
+        Var(name): {
+            lookupTreeDef(vars, name, s2d("nan"));
+        };
     }
 }
