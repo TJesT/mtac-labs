@@ -1,10 +1,12 @@
 exp = op*;
 
-op = int | sum | mul;
+op = scalar | sum | mul;
 sum = ws "+" ws {AddRPN()};
 mul = ws "*" ws {MulRPN()};
 
-int    = ws ('-'? digit+)$i ws {Int(s2i($i))};
+scalar = num;
+
+num   = ws (digit+)$d ws {NumRPN(s2d($d))};
 
 digit  = '0'-'9';
 ws     = (' ' | '\t' | '\r')*;

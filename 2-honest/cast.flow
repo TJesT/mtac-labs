@@ -1,0 +1,38 @@
+import utils;
+import alg;
+import rpn;
+
+export {
+    alg2rpn(exp: Exp) -> ExpRPN;
+    rpn2alg(exp_rpn: ExpRPN) -> Exp;
+}
+
+alg2rpn(exp: Exp) -> ExpRPN {
+	switch(exp) {
+		Add(l, r): 
+			ExpRPN(concat(concat(alg2rpn(l).rpn, alg2rpn(r).rpn), [AddRPN()]));
+		Mul(l, r): 
+			ExpRPN(concat(concat(alg2rpn(l).rpn, alg2rpn(r).rpn), [MulRPN()]));
+		Num(val): 
+			ExpRPN([NumRPN(val)]);
+	}
+}
+
+rpn2alg(exp_rpn: ExpRPN) -> Exp {
+    fold(exp_rpn.rpn, ref [], \stack, exp -> {
+        switch(exp) {
+            NumRPN(i): refArrayPush(stack, Num(i));
+            MulRPN(): {
+                r = stack_pop(stack);
+                l = stack_pop(stack);
+                refArrayPush(stack, Mul(l ,r));
+            };
+            AddRPN(): {
+                r = stack_pop(stack);
+                l = stack_pop(stack);
+                refArrayPush(stack, Add(l ,r));
+            };
+        };
+        stack;
+    }) |> stack_pop;
+}

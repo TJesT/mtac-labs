@@ -1,0 +1,93 @@
+import var;
+
+export {
+    simplify(exp: Exp) -> Exp;
+}
+
+simplify(exp : Exp) -> Exp{
+    switch (exp) {
+        Add(l, r): {
+            left = simplify(l);
+            right = simplify(r);
+            
+            if(left == Num(0) && right == Num(0)) {
+                Num(0);
+            } else if(left == Num(0)) {
+                right;
+            } else if(right == Num(0)) {
+                left;
+            } else {
+                switch(right){
+                    Neg(v) : Sub(left, v);
+                    default : Add(left, right); 
+                }
+            }
+        }
+
+        Sub(l, r): {
+            left = simplify(l);
+            right = simplify(r);
+
+            if(left == Num(0) && right == Num(0)) {
+                Num(0);
+            } else if(left == Num(0)){
+                Neg(right);
+            } else if (right == Num(0)) {
+                left;
+            } else{
+                switch(right){
+                    Neg(v) : Add(left, v);
+                    default : Sub(left, right);
+                }
+            }
+        }
+
+        Mul(l, r): {
+            left = simplify(l);
+            right = simplify(r);
+
+            if(left == Num(1)) {
+                right;
+            } else if(right == Num(1)) {
+                left;
+            } else if (left == Num(0) || right == Num(0)) {
+                Num(0);
+            } else {
+                Mul(left, right);
+            }
+        }
+
+        Div(l, r): {
+            left = simplify(l);
+            right = simplify(r);
+
+            if(right == Num(0)){
+                Div(left, right);
+            } else if((left == Num(0)) && right != Num(0)) {
+                Num(0);
+            } else if(right == Num(1)) {
+                left;
+            } else if(right == left) {
+                Num(1);
+            } else {
+                Div(left, right);
+            }
+        }    
+
+        Neg(e):{
+            simplified = simplify(e);
+
+            switch(simplified){
+                Neg(ex) : ex;
+                default : { 
+                if(simplified == Num(0)){
+                    Num(0);
+                }else{ 
+                    Neg(simplified)};
+                }
+            }
+        }
+
+        default: exp;
+    }
+}

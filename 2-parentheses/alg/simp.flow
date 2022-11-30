@@ -181,6 +181,9 @@ do_simplify_step(exp : Exp) -> Exp {
                     }
                     else if (is_one(arg2_args[0])) { // x * (1 / y) == x / y
                         Div(do_simplify_step(arg1), do_simplify_step(arg2_args[1]));
+                    } 
+                    else if (is_neg_one(arg2_args[0])) { // x * (-1 / y) == -x / y
+                        Mul(Double(-1.0), Div(do_simplify_step(arg1), do_simplify_step(arg2_args[1])));
                     }
                     else {
                         Mul(do_simplify_step(arg1), do_simplify_step(arg2));
@@ -237,6 +240,9 @@ do_simplify_step(exp : Exp) -> Exp {
         Pow(arg1, arg2): {
             if (is_one(arg2)) { // x ^ 1
                 do_simplify_step(arg1);
+            } 
+            else if (arg2 == Double(2.0)) { // x ^ 2 = x * x
+                Mul(arg1, arg1);
             }
             else {
                 Pow(do_simplify_step(arg1), do_simplify_step(arg2));
@@ -245,7 +251,15 @@ do_simplify_step(exp : Exp) -> Exp {
         Var(v): Var(v);
         Int(i): Int(i);
         Double(d): Double(d);
-        Ln(arg): Ln(do_simplify_step(arg));
-        // DerivativeExp(arg, v): DerivativeExp(do_simplify_step(arg), v);
+        Ln(arg): if(arg == Var("math_e")) {
+            Double(1.0);
+        } 
+        else if (is_one(arg)) {
+            Double(0.0);
+        }
+        else {
+            Ln(do_simplify_step(arg));
+        }
+        Derivative(arg, v): Derivative(do_simplify_step(arg), v);
     }
 }

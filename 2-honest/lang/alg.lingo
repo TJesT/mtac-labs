@@ -1,0 +1,14 @@
+exp = add;
+
+add = mul:arg1 ws "+" ws exp:arg2 {Add(:arg1, :arg2)} | mul;
+mul = ws factor:arg1 ws "*" ws mul:arg2 {Mul(:arg1, :arg2)} | factor;
+
+factor = scalar | "(" ws exp:e ws ")" {:e};
+
+scalar = num;
+
+num   = ws (digit+)$d ws {Num(s2d($d))};
+
+digit  = '0'-'9';
+ws     = (' ' | '\t' | '\r')*;
+letter = letter = 'a'-'z' | 'A'-'Z';

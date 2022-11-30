@@ -1,0 +1,35 @@
+import runtime;
+import alg/calc;
+import alg/simp;
+
+main() {
+    vars := setTree(^vars, "a", 1.0);
+    vars := setTree(^vars, "e", 2.71828182845904);
+    vars := setTree(^vars, "x", 2.0);
+
+    // algr_test : string = "(((1 - 1) - 2) + (1 * 2))";
+    // vars_test : string = "((a + ln(e)) ^ 1.0)";
+    // simp_test : string = "((ln(e) + 0) - ln(e))";
+    derv_test : string = "d(x*y)/d(x)";
+
+    // test = "(" + "(" + algr_test + "+" + vars_test + ")" + "+" + simp_test + ")";
+
+    // test |> s2exp |> println;
+    // test |> s2exp |> exp2s |> println;
+    // calc_exp(test |> s2exp, ^vars) |> println;
+
+    // test |> s2exp |> exp_simplify |> println;
+    // test |> s2exp |> exp_simplify |> exp2s |> println;
+    // calc_exp(test |> s2exp |> exp_simplify, ^vars) |> println;
+
+    derv_test |> s2exp |> println;
+    derivative2exp(derv_test |> s2exp, "x", ^vars) |> exp2s |> println;
+    derivative2exp(derv_test |> s2exp, "x", ^vars) |> exp_simplify |> exp2s |> println;
+    calc_exp(derivative2exp(derv_test |> s2exp, "x", ^vars) |> exp_simplify, ^vars) |> println;
+
+    // "3 4 2 * 1 5 - 2 3 ^ ^ / +" |> calc_spolish |> println;
+
+    // "(0.4 ^ (1/2))" |> s2exp |> exp2spolish |> calc_spolish |> println;
+
+    quit(0);
+}

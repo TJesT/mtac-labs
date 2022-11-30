@@ -1,0 +1,73 @@
+import lingo/pegcode/driver;
+import utils;
+
+export {
+    Exp ::= Mul, Add, Div, Sub, Num, Neg, Var;
+    Add(left : Exp, right : Exp);
+    Mul(left : Exp, right : Exp);
+    Div(left : Exp, right : Exp);
+    Sub(left : Exp, right : Exp);
+    Num(value : double);
+    Neg(exp : Exp);
+    Var(name : string);
+
+    s2alg(s: string) -> Exp;
+
+    alg_calc(exp: Exp, vars: Tree<string, double>) -> double;
+
+    var_add(name: string, value: double);
+}
+
+resolve_sub_sequence(arg: [flow]) -> Sub {
+    fold(arg[0], arg[1], \red, sub_i -> Sub(red, sub_i));
+}
+
+resolve_div_sequence(arg: [flow]) -> Sub {
+    fold(arg[0], arg[1], \red, sub_i -> Div(red, sub_i));
+}
+
+rassoc_PegActions = {
+    setTree(setTree(defaultPegActions.t, 
+        "resolve_SubSeq", resolve_sub_sequence),
+        "resolve_DivSeq", resolve_div_sequence) |> SemanticActions;
+}
+
+alg_calc(exp : Exp, vars: Tree<string, double>) -> double {
+    switch (exp) {
+        Mul(l, r): alg_calc(l, vars) * alg_calc(r, vars);
+        Add(l, r): alg_calc(l, vars) + alg_calc(r, vars);
+        Div(l, r): {
+            alg_calc(l, vars) / {
+                val : double = alg_calc(r, vars);
+                if (val == 0.0) {
+                    println("Exception: division by zero");
+                    s2d("nan");
+                } else {
+                    val;
+                }
+            }
+        };
+        Sub(l, r): alg_calc(l, vars) - alg_calc(r, vars);
+        Num(n): n;
+        Neg(n): -alg_calc(n, vars);
+        Var(name): switch(lookupTree(vars, name)) {
+            Some(val): val;
+            None(): {
+                println("Exception: variable `" + name + "` is not defined");
+                s2d("nan");
+            }
+        };
+    }
+}
+
+alg_grammar_singleton : ref Maybe<[PegOp]> = ref None();
+
+alg_grammar() {
+    onlyOnce(alg_grammar_singleton, \ -> {
+        compilePegGrammar("#include /home/tjest/area9/flow-dump/2/lang/var.lingo");
+	});
+}
+
+s2alg(s: string) -> Exp {
+    parsic(alg_grammar(), s, rassoc_PegActions);
+}

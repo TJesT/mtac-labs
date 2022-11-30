@@ -1,0 +1,20 @@
+import runtime;
+import lingo/pegcode/driver;
+
+import var;
+
+get_vars() -> Tree<string, double> {
+	setTree(setTree(
+        makeTree(),
+        "x", 1.5),
+        "y", -2.5);
+}
+
+main() {
+    exp_alg = "x+2*(2+y+4*5)";
+    exp_alg |> println;
+    exp_alg |> s2alg |> println;
+    alg_calc(exp_alg |> s2alg, get_vars()) |> println;
+
+    quit(0);
+}

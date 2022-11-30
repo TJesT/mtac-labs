@@ -1,7 +1,8 @@
 import alg/gram;
+import alg/derv;
 
 export {
-    vars : ref Tree<string, double> = ref makeTree();
+    vars : ref Tree<string, double> = ref setTree(makeTree(), "math_e", 2.7182818284590452);
 
     calc_exp(exp : Exp, vars : Tree<string, double>) -> double;
     calc_spolish(string_polish: string, vars: Tree<string, double>) -> double ;
@@ -53,6 +54,11 @@ calc_exp(exp : Exp, vars : Tree<string, double>) -> double {
             }
         };
         Ln(val): log(calc_exp(val, vars));
+
+        Derivative(arg, v): {
+            calc_exp(exp_simplify(derivative2exp(arg, v, vars)), vars);
+        }
+
         Int(i): i2d(i);
         Double(d): d;
         Var(name): {

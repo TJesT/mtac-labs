@@ -1,0 +1,33 @@
+import lingo/pegcode/driver;
+import utils;
+
+export {
+    Exp ::= Mul, Add, Num;
+    Add(left : Exp, right : Exp);
+    Mul(left : Exp, right : Exp);
+    Num(value : double);
+
+    s2alg(s: string) -> Exp;
+
+    alg_calc(exp: Exp) -> double;
+}
+
+alg_calc(exp : Exp) -> double {
+    switch (exp) {
+        Add(l, r): alg_calc(l) + alg_calc(r);
+        Mul(l, r): alg_calc(l) * alg_calc(r);
+        Num(n): n;
+    }
+}
+
+alg_grammar_singleton : ref Maybe<[PegOp]> = ref None();
+
+alg_grammar() {
+    onlyOnce(alg_grammar_singleton, \ -> {
+        compilePegGrammar("#include /home/tjest/area9/flow-dump/2/lang/alg.lingo");
+	});
+}
+
+s2alg(s: string) -> Exp {
+    parsic(alg_grammar(), s, defaultPegActions);
+}

@@ -1,0 +1,24 @@
+exp = add;
+
+add = ws sub:arg1 ws "+" ws exp:arg2 {Add(:arg1, :arg2)} | sub;
+mul = ws div:arg1 ws "*" ws mul:arg2 {Mul(:arg1, :arg2)} | div;
+
+sub  = mul:arg1 subs*:arg2 {resolve_SubSeq(:arg1, :arg2)};
+subs = ws '-' ws mul:arg {:arg};
+
+div  = neg:arg1 divs*:arg2 {resolve_DivSeq(:arg1, :arg2)};
+divs = ws '/' ws neg:arg {:arg};
+
+neg = ws '-' neg:n ws {Neg(:n)} | factor;
+factor = ws scalar ws | "(" ws exp:e ws ")" {:e};
+
+scalar = num | var;
+
+num = int$n {Num{s2d($n)}};
+var = (letter (letter | digit)*)$v{Var($v)};
+
+int   = digit+;
+
+digit  = '0'-'9';
+ws     = (' ' | '\t' | '\r')*;
+letter = ('a'-'z') | ('A'-'Z');

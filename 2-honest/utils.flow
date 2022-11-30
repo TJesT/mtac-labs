@@ -1,0 +1,19 @@
+import string;
+
+export {
+    queue_pop(queue: ref [?]) -> ?;
+    stack_pop(stack: ref [?]) -> ?;
+}
+
+queue_pop(queue: ref [?]) -> ? {
+    el = ^queue[0];
+    queue := subrange(^queue, 1, length(^queue));
+    el;
+}
+
+stack_pop(stack: ref [?]) -> ? {
+	topPos = length(^stack) - 1;
+	el = ^stack[topPos];
+	stack := subrange(^stack, 0, topPos);
+    el;
+}

@@ -3,7 +3,7 @@ import ds/tree;
 import math/math;
 
 export {
-    Exp ::= Int, Double, Var, Add, Mul, Sub, Div, Mod, Pow, Ln;
+    Exp ::= Int, Double, Var, Add, Mul, Sub, Div, Mod, Pow, Ln, Derivative;
     
     Add : (left : Exp, right : Exp);
     Sub : (left : Exp, right : Exp);
@@ -12,6 +12,8 @@ export {
     Mod : (left : Exp, right : Exp);
     Pow : (left : Exp, right : Exp);
     Ln  : (value : Exp);
+
+    Derivative : (arg : Exp, var : string);
 
     Int    : (i : int);
     Double : (d : double);
@@ -35,10 +37,11 @@ exp_sign(exp : Exp) -> string {
         Pow(arg1, arg2): "^";
         Ln(arg): "ln";
 
+        Derivative(arg, v): "d/dx";
+
         Var(v): "var";
         Int(i): "num";
         Double(d): "num";
-        // DerivativeExp(arg, v): "d/dx";
     }
 }
 
@@ -51,7 +54,8 @@ exp_unpack(exp : Exp) -> [Exp] {
         Div(arg1, arg2): [arg1, arg2];
         Pow(arg1, arg2): [arg1, arg2];
         Ln(arg): [arg];
-        // Derivative(arg, v): [arg, Var(v)];
+
+        Derivative(arg, v): [arg, Var(v)];
 
         Var(v): [Var(v)];
         Int(i): [Int(i)];
@@ -73,19 +77,16 @@ s2exp(str_exp : string) -> Exp {
 
 exp2s(exp : Exp) -> string {
     switch (exp) {
-        Add(left, right): 
-            "(" + exp2s(left) + " + " + exp2s(right) + ")";
-        Mul(left, right): 
-            "(" + exp2s(left) + " * " + exp2s(right) + ")";
-        Sub(left, right):
-            "(" + exp2s(left) + " - " + exp2s(right) + ")";
-        Div(left, right):
-            "(" + exp2s(left) + " / " + exp2s(right) + ")";
-        Mod(left, right):
-            "(" + exp2s(left) + " % " + exp2s(right) + ")";
-        Pow(left, right):
-            "(" + exp2s(left) + " ^ " + exp2s(right) + ")";
+        Add(left, right): "(" + exp2s(left) + " + " + exp2s(right) + ")";
+        Mul(left, right): "(" + exp2s(left) + " * " + exp2s(right) + ")";
+        Sub(left, right): "(" + exp2s(left) + " - " + exp2s(right) + ")";
+        Div(left, right): "(" + exp2s(left) + " / " + exp2s(right) + ")";
+        Mod(left, right): "(" + exp2s(left) + " % " + exp2s(right) + ")";
+        Pow(left, right): "(" + exp2s(left) + " ^ " + exp2s(right) + ")";
         Ln(val): "ln(" + exp2s(val) + ")";
+
+        Derivative(arg, v): "d" + exp2s(arg) + "/d(" + v + ")";
+
         Int(i):    i2s(i);
         Double(d): d2s(d);
         Var(name): name;
@@ -107,6 +108,9 @@ exp2spolish(exp : Exp) -> string {
         Pow(left, right): 
             exp2spolish(left) + " " + exp2spolish(right) + " ^";
         Ln(val): exp2spolish(val) + " Ln";
+        
+        Derivative(arg, var): "d" + exp2spolish(arg) + "/d(" + var + ")";
+        
         Int(i)   : i2s(i);
         Double(d): d2s(d);
         Var(name): name;

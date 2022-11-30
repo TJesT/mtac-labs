@@ -1,0 +1,99 @@
+import alg/simp;
+
+export {
+    derivative2exp(arg : Exp, var : string, vars : Tree<string, double>) -> Exp;
+}
+
+exp_contains_var(exp : Exp, var : string, vars : Tree<string, double>) -> bool {
+    switch (exp) {
+        Var(v): {
+            v == var;
+        }
+        Add(arg1, arg2): exp_contains_var(arg1, var, vars) 
+                            || exp_contains_var(arg2, var, vars);
+        Div(arg1, arg2): exp_contains_var(arg1, var, vars) 
+                            || exp_contains_var(arg2, var, vars);
+        Mul(arg1, arg2): exp_contains_var(arg1, var, vars) 
+                            || exp_contains_var(arg2, var, vars);
+        Sub(arg1, arg2): exp_contains_var(arg1, var, vars) 
+                            || exp_contains_var(arg2, var, vars);
+        Pow(arg1, arg2): exp_contains_var(arg1, var, vars) 
+                            || exp_contains_var(arg2, var, vars);
+        Ln(arg): exp_contains_var(arg, var, vars);
+        Mod(arg1, arg2): false;
+        
+        Int(i): false;
+        Double(d): false;
+        Derivative(arg, v): {println("Exception: invalid order of checking"); false;}
+    }
+}
+
+derivative2exp(exp : Exp, var : string, vars : Tree<string, double>) -> Exp {
+    switch (exp) {
+        Add(arg1, arg2): Add(derivative2exp(arg1, var, vars), derivative2exp(arg2, var, vars));
+        Sub(arg1, arg2): Sub(derivative2exp(arg1, var, vars), derivative2exp(arg2, var, vars));
+        Mul(arg1, arg2): {
+            var_in_1 : bool = exp_contains_var(arg1, var, vars);
+            var_in_2 : bool = exp_contains_var(arg2, var, vars);
+            if (var_in_1 && var_in_2) {
+                Add(Mul(arg2, derivative2exp(arg1, var, vars)), Mul(arg1, derivative2exp(arg2, var, vars)));
+            }
+            else if (!var_in_1 && var_in_2) {
+                Mul(arg1, derivative2exp(arg2, var, vars));
+            }
+            else if (var_in_1 && !var_in_2) {
+                Mul(arg2, derivative2exp(arg1, var, vars));
+            }
+            else {
+                Double(0.0);
+            }
+        }
+        Div(arg1, arg2): {
+            var_in_1 : bool = exp_contains_var(arg1, var, vars);
+            var_in_2 : bool = exp_contains_var(arg2, var, vars);
+            if (var_in_1 && var_in_2) {
+                Div(
+                    Sub(
+                        Mul(arg2, derivative2exp(arg1, var, vars)), 
+                        Mul(arg1, derivative2exp(arg2, var, vars))
+                    ), 
+                    Pow(arg2, Double(2.0))
+                );
+            }
+            else if (!var_in_1 && var_in_2) {
+                Mul(Div(Mul(arg1, Double(-1.0)), Pow(arg2, Double(2.0))), derivative2exp(arg2, var, vars));
+            }
+            else if (var_in_1 && !var_in_2) {
+                Div(derivative2exp(arg1, var, vars), arg2);
+            }
+            else {
+                Double(0.0);
+            }
+        }
+        Mod(arg1, arg2): {
+            println("Error: derivative from mod (%)");
+            Double(s2d("nan"));
+        }
+        Int(i): Double(0.0);
+        Double(d): Double(0.0);
+        Var(v): if (v == var) Double(1.0) else Double(0.0);
+        Pow(arg1, arg2): {
+            var_in_1 : bool = exp_contains_var(arg1, var, vars);
+            var_in_2 : bool = exp_contains_var(arg2, var, vars);
+            if (var_in_1 && var_in_2) {
+                derivative2exp(Pow(Var("math_e"), Mul(arg2, Ln(arg1))), var, vars);
+            }
+            else if (!var_in_1 && var_in_2) {
+                Mul(Mul(Pow(arg1, arg2), Ln(arg1)), derivative2exp(arg2, var, vars));
+            }
+            else if (var_in_1 && !var_in_2) {
+                Mul(Mul(arg2, Pow(arg1, Sub(arg2, Double(1.0)))), derivative2exp(arg1, var, vars));
+            }
+            else {
+                Double(0.0);
+            }
+        }
+        Derivative(arg, v): derivative2exp(derivative2exp(arg, v, vars), var, vars);
+        Ln(arg): Div(derivative2exp(arg, var, vars), arg);
+    };
+}

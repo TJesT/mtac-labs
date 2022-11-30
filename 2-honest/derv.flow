@@ -1,0 +1,22 @@
+import var;
+
+export {
+    derivative(exp : Exp, var : string) -> Exp;
+}
+
+derivative(exp : Exp, var : string) -> Exp {
+    switch(exp) {
+        Add(l, r)       : Add(derivative(l, var),derivative(r, var));
+        Sub(l, r)  : Sub(derivative(l, var),derivative(r, var));
+        Mul(l, r)  : Add(Mul(derivative(l, var), r), Mul(derivative(r, var), l));
+        Div(l, r)    : Div(Sub(Mul(derivative(l, var), r), Mul(derivative(r, var), l)), Mul(r, r));
+        Neg(e)     : Neg(derivative(e, var));
+
+        Num(value)  : Num(0);
+        Var(v)      : if(v == var) {
+               Num(1);
+            } else {
+                Num(0);
+            }
+    }
+}

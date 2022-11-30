@@ -1,0 +1,39 @@
+import lingo/pegcode/driver;
+import utils;
+
+export {
+    ExpRPN(rpn: [OpRPN]);
+    OpRPN ::= AddRPN, MulRPN, NumRPN;
+    AddRPN();
+    MulRPN();
+    NumRPN(value: double);
+
+    s2rpn(s: string) -> ExpRPN;
+
+    rpn_calc(e : ExpRPN) -> double;
+}
+
+rpn_calc(e : ExpRPN) -> double {
+	r = fold(e.rpn, ref [], 
+        \stack, exp -> {
+            switch(exp) {
+                NumRPN(val): refArrayPush(stack, val);
+                MulRPN(): refArrayPush(stack, stack_pop(stack) * stack_pop(stack));
+                AddRPN(): refArrayPush(stack, stack_pop(stack) + stack_pop(stack));
+            };
+            stack;
+        });
+	stack_pop(r);
+}
+
+rpn_grammar_singleton : ref Maybe<[PegOp]> = ref None();
+
+rpn_grammar() {
+    onlyOnce(rpn_grammar_singleton, \ -> {
+        compilePegGrammar("#include /home/tjest/area9/flow-dump/2/lang/rpn.lingo");
+	});
+}
+
+s2rpn(s: string) -> ExpRPN {
+    ExpRPN(parsic(rpn_grammar(), s, defaultPegActions));
+}

@@ -1,6 +1,8 @@
-exp = ops | scalars;
+exp = derivative | ops | scalars;
 
 ops = add | sub | mul | div | pow | mod | ln;
+
+derivative = ws "d" exp:arg "/d(" ws varname$v ws ")" ws {Derivative(:arg, $v)};  
 
 add = ws "(" ws exp:arg1 ws "+" ws exp:arg2 ws ")" ws {Add(:arg1, :arg2)};
 sub = ws "(" ws exp:arg1 ws "-" ws exp:arg2 ws ")" ws {Sub(:arg1, :arg2)};

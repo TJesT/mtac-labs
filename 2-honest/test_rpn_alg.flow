@@ -1,0 +1,20 @@
+import runtime;
+import lingo/pegcode/driver;
+
+import cast;
+
+main() {
+    exp_alg = "2 + 2 * (2 + 3 + 4*5)";
+    exp_alg |> println;
+    exp_alg |> s2alg |> println;
+    exp_alg |> s2alg |> alg_calc |> println;
+    exp_alg |> s2alg |> alg2rpn |> rpn_calc |> println;
+
+    exp_rpn = "2 2 2 3 4 5 * + + * +";
+    exp_rpn |> println;
+    exp_rpn |> s2rpn |> println;
+    exp_rpn |> s2rpn |> rpn_calc |> println;
+    exp_rpn |> s2rpn |> rpn2alg |> alg_calc |> println;
+   
+    quit(0);
+}
