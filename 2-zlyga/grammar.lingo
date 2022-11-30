@@ -1,0 +1,22 @@
+expr = add;
+
+add = (subs):l ws "+" ws expr:r {Add(:l, :r)} | subs;
+subs = (mul):l ws sub*:r {resolve_SubSeq(:l, :r)};
+sub = ws "-" ws mul:t {:t};
+
+mul = divs:l ws "*" ws (mul):r {Mul(:l, :r)} | divs;   
+divs = neg:l ws div*:r {resolve_DivSeq(:l, :r)};
+div = ws "/" ws neg:d {:d};
+
+neg = ws "-" ws neg:t {Neg(:t)} | factor;
+
+factor = num | variable | '('ws expr:t ws')' {:t};
+
+num = digit$s {Num(s2i($s))};
+variable = name$s {Var($s)};
+
+name = letter+;
+
+letter = ('a' - 'z') | ('A' - 'Z');
+digit = ('0' - '9')+;
+ws = (' '| '\t' | '\n' | '\r')*;

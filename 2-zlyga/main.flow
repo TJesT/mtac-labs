@@ -1,0 +1,507 @@
+import lingo/pegcode/driver;
+import lingo/peg;
+import runtime;
+
+Exp ::= Div, Mul, Sub, Add, Neg, Var, Num;
+Div(left : Exp, right : Exp);
+Mul(left : Exp, right : Exp);
+Sub(left : Exp, right : Exp);
+Add(left : Exp, right : Exp);
+Neg(neg : Exp);
+Var(name : string);
+Num(value : int);
+
+Rational(numenator : int, denominator : int);
+
+i2r(i : int) -> Maybe<Rational>{
+    Some(Rational(i, 1));
+}
+r2s(r : Maybe<Rational>){
+    r ?? {
+        i2s(r.numenator) + "/" + i2s(r.denominator)
+    }
+    : "None"
+}
+rational_div(l : Maybe<Rational>, r : Maybe<Rational>) -> Maybe<Rational>{
+    maybeBind2(\ll, lr -> rational_simplify(Rational(ll.numenator * lr.denominator, ll.denominator * lr.numenator)))(l, r)
+}
+rational_mul(l : Maybe<Rational>, r : Maybe<Rational>) -> Maybe<Rational>{
+    maybeBind2(\lr, rr -> rational_simplify(Rational(lr.numenator * rr.numenator, lr.denominator * rr.denominator)))(l, r)
+    
+}
+rational_sub(l : Maybe<Rational>, r : Maybe<Rational>) -> Maybe<Rational>{
+    maybeBind2(\ll, lr -> rational_simplify(Rational(ll.numenator * lr.denominator - lr.numenator * ll.denominator, ll.denominator * lr.denominator)))(l, r)
+}
+rational_add(l : Maybe<Rational>, r : Maybe<Rational>) -> Maybe<Rational>{
+    maybeBind2(\ll, lr -> rational_simplify(Rational(ll.numenator * lr.denominator + lr.numenator * ll.denominator, ll.denominator * lr.denominator)))(l, r)
+}
+rational_neg(r : Maybe<Rational>) -> Maybe<Rational>{
+    r ?? Some(Rational(-r.numenator, r.denominator))
+    : None();
+    
+}
+
+rational_simplify(val : Rational) -> Maybe<Rational> {
+    divisor = gcd(val.numenator, val.denominator);
+    Some(Rational(val.numenator / divisor, val.denominator / divisor))
+}
+
+
+calc_exp(ast : Exp, variables : Tree<string, int>) -> Maybe<Rational>{
+    switch(ast){
+        Div(l, r) : {rational_div(calc_exp(l, variables), calc_exp(r, variables))}
+        Mul(l, r) : {rational_mul(calc_exp(l, variables), calc_exp(r, variables))}
+        Sub(l, r) : {rational_sub(calc_exp(l, variables), calc_exp(r, variables))}
+        Add(l, r) : {rational_add(calc_exp(l, variables), calc_exp(r, variables))}
+        Neg(neg) : {rational_neg(calc_exp(neg, variables))}
+        Num(val) : {i2r(val)}
+        Var(name) : {
+            var_val : Maybe<int> = lookupTree(variables, name);
+            switch(var_val){
+                None(): None();
+                Some(v): Some(Rational(v, 1));
+            }
+        }
+    }
+}
+
+grammar_singleton : ref Maybe<[PegOp]> = ref None();
+
+compile_grammar(){
+    onlyOnce(grammar_singleton, \ -> {
+        compilePegGrammar("#include /home/tjest/area9/flow-dump/2-5+/grammar.lingo");
+    });
+}
+
+resolve_SubSeq(subs : [flow]){
+    fold(subs[1], subs[0], \acc, nextsub -> Sub(acc, nextsub));
+}
+resolve_DivSeq(divs : [flow]){
+    fold(divs[1], divs[0], \acc, nextdiv -> Div(acc, nextdiv));
+}
+
+actions = setTree(setTree(defaultPegActions.t, 
+    "resolve_SubSeq", resolve_SubSeq), 
+    "resolve_DivSeq", resolve_DivSeq) |> SemanticActions;
+
+s2exp(s : string) -> Exp{
+    parsic(compile_grammar(), s, actions)
+}
+
+//---------------------------------------------//
+
+Polynom(sum: Tree<PolyProd, int>);
+PolyProd(prod: Tree<string, int>);
+RationalFunction(num: Polynom, den: Polynom);
+
+polynom2s(e: Polynom) -> string { 
+    rtrim2(concatStrings(foldTree(e.sum, [], \k,v,acc -> concat(acc, [i2s(v) + polyprod2s(k) + " + "]))), " +");
+}
+
+rationalfunction2s(rf: RationalFunction) -> string { 
+    if (rf.den ==  Polynom(setTree(makeTree(), PolyProd(makeTree()), 1))) {
+        polynom2s(rf.num);
+    } else {
+        concatStrings(["(", polynom2s(rf.num) ,") / (", polynom2s(rf.den) ,")"]);
+    }
+}
+
+polyprod2s(e: PolyProd) -> string { 
+    rtrim2(concatStrings(foldTree(e.prod , [], \k, v, acc -> concat(acc, [k + "^" + i2s(v) + " * "]))), " *");
+}
+
+polyprod_mul(l: PolyProd, r: PolyProd) -> PolyProd { 
+    PolyProd(mergeTreeCustom(l.prod, r.prod, \k, lv, rv -> rv + lv));
+}
+
+alg2rationalfunction(e: Exp) -> RationalFunction {
+    rf = switch (e) {
+        Add(l,r): rationalfunction_add(alg2rationalfunction(l) , alg2rationalfunction(r));
+        Mul(l,r): rationalfunction_mul(alg2rationalfunction(l), alg2rationalfunction(r));
+        Sub(l,r): rationalfunction_sub(alg2rationalfunction(l), alg2rationalfunction(r));
+        Div(l,r): rationalfunction_div(alg2rationalfunction(l), alg2rationalfunction(r));
+        Neg(expr): rationalfunction_neg(alg2rationalfunction(expr));
+        Num(v): RationalFunction(
+            Polynom(setTree(makeTree(), PolyProd(makeTree()), v)),
+            Polynom(setTree(makeTree(), PolyProd(makeTree()), 1))
+        );
+        Var(name): RationalFunction(
+            Polynom(setTree(makeTree(), PolyProd(setTreeValues(makeTree(),[Pair(name, 1)])), 1)),
+            Polynom(setTree(makeTree(), PolyProd(makeTree()), 1))
+        );
+    }
+    rf2 = RationalFunction(polynom_filter(rf.num), polynom_filter(rf.den));
+
+    gcd_poly = gcd(gcd_coef(rf2.num), gcd_coef(rf2.den));
+    rf3 = rationalfunction_div_int(rf2, gcd_poly);
+    gcd_num = gcd_coef(rf3.num);
+    rf3_num = polynom_div_int(rf3.num, gcd_num);
+    if (rf3_num == rf3.den) {
+        RationalFunction(Polynom(setTree(makeTree(), PolyProd(makeTree()), gcd_num)), Polynom(setTree(makeTree(), PolyProd(makeTree()), 1)));
+    } else {
+        rf3;
+    }
+}
+
+
+polynom_filter(p: Polynom) -> Polynom {
+    Polynom(filterTree(p.sum, \k, v -> v != 0));
+}
+
+gcd_coef(p: Polynom) -> int {
+    initial = getTreeValues(p.sum)[0];
+    foldTree(p.sum, initial, \k, v, acc -> gcd(acc,v));
+}
+
+polynom_div_int(p: Polynom, c: int) -> Polynom {
+    Polynom(mapTree(p.sum, \v -> v/c));
+}
+
+rationalfunction_div_int(rf: RationalFunction, c: int) -> RationalFunction { 
+    RationalFunction(polynom_div_int(rf.num, c), polynom_div_int(rf.den, c));
+}
+
+rationalfunction_add(l: RationalFunction, r: RationalFunction) -> RationalFunction { 
+     RationalFunction(polynom_add(polynom_mul(l.num, r.den), polynom_mul(r.num, l.den)), polynom_mul(l.den, r.den));
+ }
+
+rationalfunction_sub(l: RationalFunction, r: RationalFunction) -> RationalFunction { 
+     RationalFunction(polynom_add(polynom_mul(l.num, r.den), polynom_neg(polynom_mul(r.num, l.den))), polynom_mul(l.den, r.den));
+ }
+
+rationalfunction_mul(l: RationalFunction, r: RationalFunction) -> RationalFunction {
+     RationalFunction(polynom_mul(l.num, r.num), polynom_mul(l.den, r.den));
+ }
+
+rationalfunction_div(l: RationalFunction, r: RationalFunction) -> RationalFunction {
+     RationalFunction(polynom_mul(l.num, r.den), polynom_mul(l.den, r.num));
+}
+
+rationalfunction_neg(rf: RationalFunction) -> RationalFunction {
+     RationalFunction(polynom_neg(rf.num), rf.den);
+}
+
+polynom_add(l: Polynom, r: Polynom) {
+    Polynom(mergeTreeCustom(l.sum, r.sum, \k, lv, rv -> lv + rv));
+}
+
+polynom_mul(l: Polynom, r: Polynom) { 
+    Polynom(foldTree(l.sum, makeTree(), \lp, lc, acc -> {
+        foldTree(r.sum, acc, \rp, rc, ac -> {
+            pp = polyprod_mul(lp, rp);
+            switch(lookupTree(ac, pp)) {
+                Some(coef): setTree(ac, pp, coef + (lc * rc));
+                None(): setTree(ac, pp, (lc * rc));
+            }     
+        });
+    }));
+}
+
+polynom_neg(p: Polynom) -> Polynom {
+     Polynom(mapTree(p.sum, \r -> -r));
+}
+
+simplify(exp : Exp) -> Exp{
+    switch (exp) {
+        Add(l, r): {
+            left = simplify(l);
+            right = simplify(r);
+            
+            if(left == Num(0) && right == Num(0)) {
+                Num(0);
+            } else if(left == Num(0)) {
+                right;
+            } else if(right == Num(0)) {
+                left;
+            } else {
+                switch(right){
+                    Neg(v) : Sub(left, v);
+                    default : Add(left, right); 
+                }
+            }
+        }
+
+        Sub(l, r): {
+            left = simplify(l);
+            right = simplify(r);
+
+            if(left == Num(0) && right == Num(0)) {
+                Num(0);
+            } else if(left == Num(0)){
+                Neg(right);
+            } else if (right == Num(0)) {
+                left;
+            } else{
+                switch(right){
+                    Neg(v) : Add(left, v);
+                    default : Sub(left, right);
+                }
+            }
+        }
+
+        Mul(l, r): {
+            left = simplify(l);
+            right = simplify(r);
+
+            if(left == Num(1)) {
+                right;
+            } else if(right == Num(1)) {
+                left;
+            } else if (left == Num(0) || right == Num(0)) {
+                Num(0);
+            } else {
+                Mul(left, right);
+            }
+        }
+
+        Div(l, r): {
+            left = simplify(l);
+            right = simplify(r);
+
+            if(right == Num(0)){
+                Div(left, right);
+            } else if((left == Num(0)) && right != Num(0)) {
+                Num(0);
+            } else if(right == Num(1)) {
+                left;
+            } else if(right == left) {
+                Num(1);
+            } else {
+                Div(left, right);
+            }
+        }    
+
+        Neg(e):{
+            simplified = simplify(e);
+
+            switch(simplified){
+                Neg(ex) : ex;
+                default : { 
+                if(simplified == Num(0)){
+                    Num(0);
+                }else{ 
+                    Neg(simplified)};
+                }
+            }
+        }
+
+        default: exp;
+    }
+}
+
+derivative(exp : Exp, var : string) -> Exp {
+    switch(exp) {
+        Add(l, r): Add(derivative(l, var),derivative(r, var));
+        Sub(l, r): Sub(derivative(l, var),derivative(r, var));
+        Mul(l, r): Add(Mul(derivative(l, var), r), Mul(derivative(r, var), l));
+        Div(l, r): Div(Sub(Mul(derivative(l, var), r), Mul(derivative(r, var), l)), Mul(r, r));
+        Neg(e):    Neg(derivative(e, var));
+
+        Num(value)  : Num(0);
+        Var(v)      : if(v == var) {
+               Num(1);
+            } else {
+                Num(0);
+            }
+    }
+}
+
+
+//----------------------------------------------------------------------------------------------------------------
+
+Pattern(identity : Exp, equal : Exp);
+
+patterns = [
+    Pattern(s2exp("x-x"), s2exp("0")),
+    Pattern(s2exp("x + 0"), s2exp("x")),
+    Pattern(s2exp("0 + x"), s2exp("x")),
+    Pattern(s2exp("1*x"), s2exp("x")),
+    Pattern(s2exp("x*1"), s2exp("x")),
+    Pattern(s2exp("x+x"), s2exp("2*x")),
+    Pattern(s2exp("((a+b)/c)"), s2exp("a/c+b/c")),
+    Pattern(s2exp("((a+b)*c)"), s2exp("a*c+b*c")),
+    Pattern(s2exp("c*(a+b)"), s2exp("a*c+b*c")),
+    Pattern(s2exp("(x-1)*(x+1)"), s2exp("x*x - 1")),
+    Pattern(s2exp("(x+1)*(x-1)"), s2exp("x*x - 1")),
+    Pattern(s2exp("(y-y)+x"), s2exp("x")),
+    Pattern(s2exp("(y-y)*x"), s2exp("0")),
+    Pattern(s2exp("x*(y-y)"), s2exp("0")),
+    Pattern(s2exp("(x*(x*x))+(x*x)*y"), s2exp("x*x * (x + y)"))
+];
+
+MatchingResult(exp_vars : Tree<string, Exp>, result: bool);
+
+// сравнение ast деревьев. Паттерна и выражения
+is_match(exp : Exp, pattern : Exp, variables : Tree<string, Exp>){
+    switch(exp){
+        Div(le, re) : {
+            switch(pattern){
+                Div(lp, rp) : {
+                    res = is_match(le, lp, variables);
+                    if(res.result){
+                        is_match(re, rp, res.exp_vars)
+                    }
+                    else{
+                        res
+                    }
+                }
+                default : MatchingResult(variables, false)
+            }
+        }
+        Mul(le, re): {
+            switch(pattern){
+                Mul(lp, rp) : {
+                    res = is_match(le, lp, variables);
+                    if(res.result){
+                        is_match(re, rp, res.exp_vars)
+                    }
+                    else{
+                        res
+                    }
+                }
+                default : MatchingResult(variables, false)
+            }
+        }
+        Sub(le, re): {
+            switch(pattern){
+                Sub(lp, rp) : {
+                    res = is_match(le, lp, variables);
+                    if(res.result){
+                        is_match(re, rp, res.exp_vars)
+                    }
+                    else{
+                        res
+                    }
+                }
+                default : MatchingResult(variables, false)
+            }
+        }
+        Add(le, re): {
+            switch(pattern){
+                Add(lp, rp) : {
+                    res = is_match(le, lp, variables);
+                    if(res.result){
+                        is_match(re, rp, res.exp_vars)
+                    }
+                    else{
+                        res
+                    }
+                }
+                default : MatchingResult(variables, false)
+            }
+        }
+        Neg(ee): {
+            switch(pattern){
+                Neg(ep) : {
+                    is_match(ee, ep, variables);
+                }
+                default : MatchingResult(variables, false)
+            }
+        }
+        Num(de): {
+            switch(pattern){
+                Num(dp) : {
+                    MatchingResult(variables, de == dp)
+                }
+                Var(namep) : {
+                    alias = setTree(variables, namep, Num(de));
+                    MatchingResult(alias, true)
+                }
+                default : MatchingResult(variables, false)
+            }
+        }
+        Var(name): {
+            switch(pattern){
+                Var(namep) : {
+                    switch(lookupTree(variables, namep)){
+                        None() : {
+                            alias = setTree(variables, namep, Var(name));
+                            MatchingResult(alias, true)
+                        }
+                        Some(val) : {
+                            switch(val){
+                                Var(n) : MatchingResult(variables, n == name)
+                                default : MatchingResult(variables, false);
+                            }
+                            
+                        }
+                    }
+                }
+                default : MatchingResult(variables, false)
+            }
+        }
+    }
+}
+
+//переименование переменных паттерна
+pattern2context(variables : Tree<string, Exp>, exp : Exp){
+    switch(exp){
+        Div(l, r): Div(pattern2context(variables, l), pattern2context(variables, r));
+        Mul(l, r): Mul(pattern2context(variables, l), pattern2context(variables, r));
+        Sub(l, r): Sub(pattern2context(variables, l), pattern2context(variables, r));
+        Add(l, r): Add(pattern2context(variables, l), pattern2context(variables, r));
+        Neg(e): Neg(pattern2context(variables, e));
+        Num(d) : exp;
+        Var(name) : {
+            switch(lookupTree(variables, name)){
+                Some(val) : val;
+                None() : exp;
+            }
+        }
+    }
+}
+pattern_match(exp : Exp, pattern : Pattern){
+    res = is_match(exp, pattern.identity, makeTree());
+    if(res.result){
+        pattern2context(res.exp_vars, pattern.equal)
+    }
+    else{
+        exp
+    }
+}
+
+//обход ast дерева
+pattern_findall(exp : Exp){
+    switch(exp){
+        Var(name) : exp
+        Num(d) : exp
+        default : {
+            exp_simplified = switch(exp){
+                Div(l, r) : Div(pattern_findall(l), pattern_findall(r))
+                Mul(l, r) : Mul(pattern_findall(l), pattern_findall(r))
+                Sub(l, r) : Sub(pattern_findall(l), pattern_findall(r))
+                Add(l, r) : Add(pattern_findall(l), pattern_findall(r))
+                Neg(e) : Neg(pattern_findall(e))
+                default : exp
+            }
+
+            fold(patterns, exp_simplified, \e, pattern -> pattern_match(e, pattern))
+        }
+    }
+}
+
+//-----------------------------------------------
+
+main(){
+    variable_pairs = [Pair("x", 2), Pair("y", 5)];
+    variables = setTreeValues(TreeEmpty(), variable_pairs);
+
+    test_str = "(x*x*x)+ x+ x";
+    
+    ast = test_str |> s2exp;
+    ast |> println;
+
+    sast = ast |> pattern_findall;
+    sast |> println;
+
+    println("\nwithout simplifying: " + r2s(calc_exp(ast, variables)));
+    println("simplified: " + r2s(calc_exp(sast, variables)));
+
+    dast = derivative(ast, "x");
+    "\nderivative of " + test_str |> println;
+    dast |> println;
+    "\nsimplified derivative of " + test_str |> println;
+    dast |> pattern_findall |> println;
+
+    quit(0);
+}
